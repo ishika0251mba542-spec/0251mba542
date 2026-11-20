@@ -12,6 +12,7 @@ import {
   CloudOff,
   Database,
   Download,
+  FileDown,
   FileText,
   HardDrive,
   Lock,
@@ -35,10 +36,13 @@ import {
 } from "./services/firestoreService";
 import {
   ASSUMPTION_LABEL,
+  applyPdfDraftToStudioState,
   createEmptyStage2,
   createEmptyStage3,
   createEmptyStage4,
   createInitialStudioState,
+  createPdfPopulatedStudioState,
+  isStages2To4Untouched,
 } from "./data/farmTraceSession11";
 import type {
   Stage2RevenuePricing as Stage2RevenuePricingData,
@@ -479,7 +483,7 @@ export default function App() {
 
           const created = await createVentureInFirestore(
             uid,
-            createInitialStudioState()
+            createPdfPopulatedStudioState()
           );
           if (cancelled) return;
           try {
@@ -521,21 +525,44 @@ export default function App() {
           return;
         }
 
-        // No divergent local data: load Cloud Firestore venture and align local cache
+        // If existing cloud venture has untouched empty Stages 2-4, auto-fill from the uploaded FarmTrace AI PDF
+        let resolvedCloudState = cloudState;
+        let syncedStatus: "synced" | "error" = "synced";
+        if (isStages2To4Untouched(cloudState)) {
+          const populated = applyPdfDraftToStudioState(cloudState);
+          try {
+            const savedAt = await saveVentureWorkspace(uid, populated);
+            if (cancelled) return;
+            resolvedCloudState = { ...populated, lastSavedAt: savedAt };
+            dirtyRef.current = false;
+          } catch (saveErr) {
+            console.error("Failed to auto-populate untouched cloud workspace from PDF:", saveErr);
+            resolvedCloudState = populated;
+            dirtyRef.current = true;
+            syncedStatus = "error";
+          }
+        } else {
+          dirtyRef.current = false;
+        }
+
+        // Align local cache with resolved Cloud Firestore state
         try {
-          window.localStorage.removeItem(userDirtyKey(uid));
+          if (syncedStatus === "synced") {
+            window.localStorage.removeItem(userDirtyKey(uid));
+          } else {
+            window.localStorage.setItem(userDirtyKey(uid), "1");
+          }
           window.localStorage.setItem(
             userCacheKey(uid),
-            JSON.stringify(cloudState)
+            JSON.stringify(resolvedCloudState)
           );
         } catch {
           // Ignore storage quota errors
         }
-        dirtyRef.current = false;
-        setFirestoreConnected(navigator.onLine);
-        setState(cloudState);
-        setLastCloudSavedAt(cloudState.lastSavedAt);
-        setSyncStatus("synced");
+        setFirestoreConnected(syncedStatus === "synced" && navigator.onLine);
+        setState(resolvedCloudState);
+        setLastCloudSavedAt(resolvedCloudState.lastSavedAt);
+        setSyncStatus(syncedStatus);
         setWorkspaceReady(true);
       } catch (err) {
         if (!cancelled) {
@@ -652,7 +679,7 @@ export default function App() {
     try {
       const created = await createVentureInFirestore(
         uid,
-        createInitialStudioState()
+        createPdfPopulatedStudioState()
       );
       try {
         window.localStorage.setItem(
@@ -935,6 +962,11 @@ export default function App() {
       liveChallenges: prev.liveChallenges.filter((c) => c.stage === 1),
       lastSavedAt: new Date().toISOString(),
     }));
+  };
+
+  const handlePopulateFromPdf = () => {
+    setChallengeError(null);
+    updateStudioState((prev) => applyPdfDraftToStudioState(prev));
   };
 
   const handleRunChallenge = async (stage: StageId) => {
@@ -1714,6 +1746,14 @@ export default function App() {
             >
               <FileText className="w-3.5 h-3.5 text-slate-500" />
               <span>Reference Venture PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handlePopulateFromPdf}
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-md transition-colors cursor-pointer"
+            >
+              <FileDown className="w-3.5 h-3.5 text-teal-700" />
+              <span>Fill Stages 2–4 from PDF</span>
             </button>
           </div>
 

@@ -197,7 +197,7 @@ export function Stage2RevenuePricing({
               className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-teal-800 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               <FileDown className="w-4 h-4" />
-              <span>Load PDF Numbers Only</span>
+              <span>Load PDF Draft (Mission 7)</span>
             </button>
             <button
               type="button"

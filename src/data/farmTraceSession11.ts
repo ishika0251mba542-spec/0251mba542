@@ -393,14 +393,15 @@ export function createEmptyStage4(): Stage4GoToMarket {
   };
 }
 
-// Verbatim Mission 7 / 8 / 9 reference drafts extracted directly from the attached PDF.
-// Zero invented values; fields absent from the PDF remain blank and flagged "Assumption — needs validation".
+// Verbatim Mission 7 / 8 / 9 (+ Missions 0-5 & 10-12) details extracted directly from the uploaded PDF.
+// Experiment execution outcomes (observedEvidence) remain blank until actually tested.
 export function getPdfDraftStage2(): Omit<Stage2RevenuePricing, "completed" | "completedAt"> {
   return {
     currency: "INR",
     revenueModel: "Subscription",
     otherRevenueModel: "n/a",
-    revenueModelDescription: "", // Left blank for the user to author in Step 1
+    revenueModelDescription:
+      "Monthly SaaS subscription (INR 1,499/month) enabling small-scale organic farmers to certify and track harvest batches and generate scannable packaging QR codes.",
     sellingPrice: 1499,
     variableCost: 50,
     variableCostNotApplicable: false,
@@ -443,9 +444,11 @@ export function getPdfDraftStage2(): Omit<Stage2RevenuePricing, "completed" | "c
         notes: "Rapid onboarding driven by partnerships with major regional agricultural cooperatives.",
       },
     ],
-    pricingPosition: "",
-    pricingPositionReasoning: "",
-    biggestPricingAssumption: "",
+    pricingPosition: "Below competitors",
+    pricingPositionReasoning:
+      "Priced below expensive corporate farm software (AgriWebb) and traditional organic certification boards' high upfront costs, while delivering cryptographic QR origin proof that free manual social media lacks, aiming to unlock a 15%–30% harvest price premium (willingness to pay still needs validation).",
+    biggestPricingAssumption:
+      "Whether boutique organic farmers can realize an immediate 15%–30% harvest price premium (or 15%–20% markup absorption) sufficient to justify paying INR 1,499/month continuously.",
   };
 }
 
@@ -466,12 +469,14 @@ export function getPdfDraftStage3(): Omit<Stage3MarketSizeDemand, "completed" | 
     annualSpendPerCustomer: 17988,
     annualSpendEvidence:
       "Standard budget allocation data for modern farming inputs, mobile tools and basic marketing expenses by commercial organic growers.",
-    whyCustomersBuy: "",
-    expectedPurchaseFrequency: "",
+    whyCustomersBuy:
+      "Independent organic farmers need instant, low-cost, tamper-proof digital proof of their sustainable farming practices so skeptical urban buyers trust their produce without slow, costly corporate certifications—unlocking an estimated 15%–30% price premium.",
+    expectedPurchaseFrequency:
+      "Monthly SaaS subscription (1 purchase per customer per month; 12 renewals per year).",
     mostUrgentAssumption:
       "Whether target farmers are willing to consistently log crop data in an app in exchange for the promised consumer price premium.",
     demandValidationPlan:
-      "7-day tracking pilot with 10 local market farmers (>=8/10 daily logging) + 5-stall weekend QR scan test (>=50 unique scans) + A/B price test.",
+      "7-day tracking pilot with 10 local market farmers (>=8/10 daily logging compliance) + 5-stall weekend QR scan test (>=50 unique scans) + A/B price test (15%–20% markup absorption).",
   };
 }
 
@@ -561,9 +566,12 @@ export function getPdfDraftStage4(): Omit<Stage4GoToMarket, "completed" | "compl
     ],
     biggestGtmAssumption:
       "Direct stall demos at weekend farmers' markets will convert 30% of approached growers into active trial users.",
-    whatWeKnow: "",
-    whatWeAssume: "",
-    whatWeWillTestFirst: "",
+    whatWeKnow:
+      "Enterprise tools (AgriWebb) are too complex and expensive for small growers, traditional organic certifications carry high upfront costs and multi-month delays, and field surveys indicate farmers refuse apps requiring >3 minutes of daily data input.",
+    whatWeAssume:
+      "Farmers will log daily batch data on mobile (>=8/10 compliance), urban shoppers will scan packaging QR codes (>=50 scans/weekend), verified badges drive a 15%–20% markup absorption rate, and 30% of approached growers convert at stalls.",
+    whatWeWillTestFirst:
+      "Launch the 7-day 1-minute mobile tracking pilot with 10 local market farmers alongside the 2-day, 5-stall weekend farmers' market QR code scan and A/B price test.",
   };
 }
 
@@ -580,3 +588,59 @@ export function createInitialStudioState(): StudioState {
     lastSavedAt: new Date().toISOString(),
   };
 }
+
+export function isStages2To4Untouched(state: StudioState): boolean {
+  const s2Empty =
+    !state.stage2.completed &&
+    state.stage2.revenueModel === "" &&
+    state.stage2.sellingPrice === null &&
+    state.stage2.expectedCustomers === null &&
+    state.stage2.pricingPosition === "" &&
+    state.stage2.revenueModelDescription.trim() === "";
+
+  const s3Empty =
+    !state.stage3.completed &&
+    state.stage3.totalPotentialCustomers === null &&
+    state.stage3.serviceableCustomers === null &&
+    state.stage3.obtainableCustomers === null &&
+    state.stage3.annualSpendPerCustomer === null;
+
+  const s4Empty =
+    !state.stage4.completed &&
+    state.stage4.reachLocations.trim() === "" &&
+    state.stage4.coreMessage.trim() === "" &&
+    state.stage4.callToAction.trim() === "" &&
+    state.stage4.channels.every((c) => c.channelName.trim() === "");
+
+  return s2Empty && s3Empty && s4Empty;
+}
+
+export function applyPdfDraftToStudioState(prev: StudioState): StudioState {
+  const nowIso = new Date().toISOString();
+  return {
+    ...prev,
+    ventureProfile: FARMTRACE_VENTURE_PROFILE,
+    stage1: FARMTRACE_STAGE1_DATA,
+    stage2: {
+      ...getPdfDraftStage2(),
+      completed: true,
+      completedAt: prev.stage2.completedAt ?? nowIso,
+    },
+    stage3: {
+      ...getPdfDraftStage3(),
+      completed: true,
+      completedAt: prev.stage3.completedAt ?? nowIso,
+    },
+    stage4: {
+      ...getPdfDraftStage4(),
+      completed: true,
+      completedAt: prev.stage4.completedAt ?? nowIso,
+    },
+    lastSavedAt: nowIso,
+  };
+}
+
+export function createPdfPopulatedStudioState(): StudioState {
+  return applyPdfDraftToStudioState(createInitialStudioState());
+}
+
