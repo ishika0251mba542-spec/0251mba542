@@ -1,0 +1,6 @@
+{
+  "name": "NEXUS Venture Studio",
+  "description": "Sequential venture strategy workbench for FarmTrace AI covering competitive positioning, revenue and pricing, market sizing, and go-to-market execution.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

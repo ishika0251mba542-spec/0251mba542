@@ -1,0 +1,292 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Authenticated founder profile and login audit timestamps.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID matching document ID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name from Google Sign-In.",
+          "maxLength": 200
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified email address from Google Sign-In.",
+          "maxLength": 320
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when user record was first created."
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the user's most recent sign-in."
+        }
+      },
+      "required": ["userId", "name", "email", "createdAt", "lastLoginAt"]
+    },
+    "VentureWorkspace": {
+      "title": "VentureWorkspace",
+      "description": "Owner-isolated NEXUS Venture Studio root workspace storing Venture Profile, Stages 1-4 (Competition & Positioning, Revenue & Pricing, Market Size & Demand, Go-to-Market), and extension anchors for modular subcollection stages.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ventureId": {
+          "type": "string",
+          "description": "Venture identifier (e.g. farmtrace-ai).",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "activeStage": {
+          "type": "integer",
+          "description": "Current active core studio stage (1 to 5)."
+        },
+        "schemaVersion": {
+          "type": "integer",
+          "description": "Workspace envelope schema version for forward-compatible module migrations (optional for v1 documents)."
+        },
+        "activeModuleId": {
+          "type": "string",
+          "description": "Optional identifier of the currently active venture module (core or future subcollection module).",
+          "maxLength": 64,
+          "pattern": "^[a-z0-9\\-]+$"
+        },
+        "ventureProfile": {
+          "type": "object",
+          "description": "Selected venture profile (name, targetCustomer, problem, geography, offer, createdAt, updatedAt, and Session 11 fields)."
+        },
+        "competitionPositioning": {
+          "type": "object",
+          "description": "Session 11 competitor research, positioning axes/scores, positioning statement, AI Strategy Challenge responses/feedback, and Competition War Room results."
+        },
+        "revenuePricing": {
+          "type": "object",
+          "description": "Stage 2 Revenue & Pricing Lab inputs, 3 manual scenarios, pricing decision, evidence, assumptions, and calculated outputs."
+        },
+        "marketSizeDemand": {
+          "type": "object",
+          "description": "Stage 3 Market Size & Demand Lab market definition, TAM/SAM/SOM counts & values, annual spend, demand checks, assumptions, and evidence."
+        },
+        "goToMarket": {
+          "type": "object",
+          "description": "Stage 4 Go-to-Market Launch Lab segment, messaging, up to 3 channels, conversion/CAC metrics, 30-day experiment plan, and GTM synthesis."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when venture workspace was initialized."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest workspace save."
+        }
+      },
+      "required": [
+        "userId",
+        "ventureId",
+        "activeStage",
+        "ventureProfile",
+        "competitionPositioning",
+        "revenuePricing",
+        "marketSizeDemand",
+        "goToMarket",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VentureModule": {
+      "title": "VentureModule",
+      "description": "Extendable subcollection document storing an individual future venture module (e.g. MVP Brief, Feature Prioritization, No-Code Tool Selection, UX & Customer Journey, AI Feature Design, API & Data Flow, Prototype Build, Usability Testing, MVP Evidence Review, Projected Financial Statements, Operating Model, HR & Founder Organisation, CAC / LTV / Burn / Runway, Legal Structure, Labour / IP / Data Risk, Government & Policy Risk) linked to the parent venture.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ventureId": {
+          "type": "string",
+          "description": "Parent venture identifier.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "moduleId": {
+          "type": "string",
+          "description": "Canonical module slug matching document ID (e.g. mvp-brief, feature-prioritization, legal-structure).",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "track": {
+          "type": "string",
+          "description": "Logical venture studio curriculum track.",
+          "enum": ["strategy", "product-mvp", "finance-ops", "legal-risk", "custom"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable module title.",
+          "maxLength": 160
+        },
+        "schemaVersion": {
+          "type": "integer",
+          "description": "Module payload schema version."
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle state of this module within the venture.",
+          "enum": ["not_started", "in_progress", "completed"]
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Structured user-entered fields specific to this module."
+        },
+        "outputs": {
+          "type": "object",
+          "description": "Calculated outputs, metrics, and synthesized deliverables for this module."
+        },
+        "assumptions": {
+          "type": "object",
+          "description": "Explicit assumptions and validation gaps tracked inside this module."
+        },
+        "evidence": {
+          "type": "object",
+          "description": "Supporting evidence, citations, and test artefacts for this module."
+        },
+        "aiChallenges": {
+          "type": "array",
+          "description": "Bounded list (max 50) of AI Strategy Challenge critiques specific to this module."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional ISO timestamp when module reached completed state.",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when module document was first created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest module update."
+        }
+      },
+      "required": [
+        "userId",
+        "ventureId",
+        "moduleId",
+        "track",
+        "title",
+        "schemaVersion",
+        "status",
+        "inputs",
+        "outputs",
+        "assumptions",
+        "evidence",
+        "aiChallenges",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VentureModuleEntry": {
+      "title": "VentureModuleEntry",
+      "description": "Optional repeatable record inside a VentureModule (such as individual usability test sessions, prioritized feature cards, financial statement line items, or compliance risk items) so modules never hit the 1 MB Firestore document limit.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ventureId": {
+          "type": "string",
+          "description": "Parent venture identifier.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "moduleId": {
+          "type": "string",
+          "description": "Parent module identifier.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "entryId": {
+          "type": "string",
+          "description": "Entry identifier matching document ID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "entryType": {
+          "type": "string",
+          "description": "Discriminator for the record kind within the module (e.g. feature, usability-test, financial-row, risk-item).",
+          "maxLength": 64
+        },
+        "orderIndex": {
+          "type": "integer",
+          "description": "Optional sort index for ordered entries."
+        },
+        "payload": {
+          "type": "object",
+          "description": "Structured entry fields."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when entry was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest entry update."
+        }
+      },
+      "required": [
+        "userId",
+        "ventureId",
+        "moduleId",
+        "entryId",
+        "entryType",
+        "payload",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Private user profile document keyed by Firebase Auth UID."
+    },
+    "/users/{userId}/ventures/{ventureId}": {
+      "schema": { "$ref": "#/entities/VentureWorkspace" },
+      "description": "Private venture workspace root document owned strictly by {userId}."
+    },
+    "/users/{userId}/ventures/{ventureId}/modules/{moduleId}": {
+      "schema": { "$ref": "#/entities/VentureModule" },
+      "description": "Extendable module documents attached to the same venture for Product/MVP, Financial/Operating, and Legal/Policy modules."
+    },
+    "/users/{userId}/ventures/{ventureId}/modules/{moduleId}/entries/{entryId}": {
+      "schema": { "$ref": "#/entities/VentureModuleEntry" },
+      "description": "Scalable repeating records belonging to a specific venture module."
+    }
+  }
+}

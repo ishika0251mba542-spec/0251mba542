@@ -1,0 +1,315 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isMapListBounded(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || arr[0] is map);
+    }
+
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['userId', 'name', 'email', 'createdAt', 'lastLoginAt'])
+        && data.keys().hasOnly(['userId', 'name', 'email', 'createdAt', 'lastLoginAt'])
+        && data.userId is string && data.userId == request.auth.uid && data.userId == userId
+        && data.name is string && data.name.size() <= 200
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 320
+        && data.createdAt is timestamp
+        && data.lastLoginAt is timestamp;
+    }
+
+    function isValidVentureWorkspace(data, userId, ventureId) {
+      return data.keys().hasAll([
+          'userId',
+          'ventureId',
+          'activeStage',
+          'ventureProfile',
+          'competitionPositioning',
+          'revenuePricing',
+          'marketSizeDemand',
+          'goToMarket',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'ventureId',
+          'activeStage',
+          'schemaVersion',
+          'activeModuleId',
+          'ventureProfile',
+          'competitionPositioning',
+          'revenuePricing',
+          'marketSizeDemand',
+          'goToMarket',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.userId is string && data.userId == request.auth.uid && data.userId == userId
+        && data.ventureId is string && data.ventureId == ventureId
+        && data.activeStage is int && data.activeStage >= 1 && data.activeStage <= 5
+        && (!('schemaVersion' in data) || (data.schemaVersion is int && data.schemaVersion >= 1 && data.schemaVersion <= 100))
+        && (!('activeModuleId' in data) || (data.activeModuleId is string && data.activeModuleId.size() > 0 && data.activeModuleId.size() <= 64 && data.activeModuleId.matches('^[a-z0-9\\-]+$')))
+        && data.ventureProfile is map
+        && data.ventureProfile.name is string && data.ventureProfile.name.size() > 0 && data.ventureProfile.name.size() <= 200
+        && data.ventureProfile.geography is string && data.ventureProfile.geography.size() <= 500
+        && data.competitionPositioning is map
+        && isMapListBounded(data.competitionPositioning.competitors, 20)
+        && isMapListBounded(data.competitionPositioning.warRoomResults, 20)
+        && isMapListBounded(data.competitionPositioning.liveChallenges, 50)
+        && data.revenuePricing is map
+        && isMapListBounded(data.revenuePricing.scenarios, 5)
+        && data.marketSizeDemand is map
+        && data.goToMarket is map
+        && isMapListBounded(data.goToMarket.channels, 3)
+        && isMapListBounded(data.goToMarket.experiment30Days, 8)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidVentureModule(data, userId, ventureId, moduleId) {
+      return data.keys().hasAll([
+          'userId',
+          'ventureId',
+          'moduleId',
+          'track',
+          'title',
+          'schemaVersion',
+          'status',
+          'inputs',
+          'outputs',
+          'assumptions',
+          'evidence',
+          'aiChallenges',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'ventureId',
+          'moduleId',
+          'track',
+          'title',
+          'schemaVersion',
+          'status',
+          'inputs',
+          'outputs',
+          'assumptions',
+          'evidence',
+          'aiChallenges',
+          'completedAt',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.userId is string && data.userId == request.auth.uid && data.userId == userId
+        && data.ventureId is string && data.ventureId == ventureId
+        && data.moduleId is string && data.moduleId == moduleId
+        && data.track is string && data.track in ['strategy', 'product-mvp', 'finance-ops', 'legal-risk', 'custom']
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 160
+        && data.schemaVersion is int && data.schemaVersion >= 1 && data.schemaVersion <= 100
+        && data.status is string && data.status in ['not_started', 'in_progress', 'completed']
+        && data.inputs is map
+        && data.outputs is map
+        && data.assumptions is map
+        && data.evidence is map
+        && isMapListBounded(data.aiChallenges, 50)
+        && (!('completedAt' in data) || data.completedAt == null || (data.completedAt is string && data.completedAt.size() <= 64))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidModuleEntry(data, userId, ventureId, moduleId, entryId) {
+      return data.keys().hasAll([
+          'userId',
+          'ventureId',
+          'moduleId',
+          'entryId',
+          'entryType',
+          'payload',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'ventureId',
+          'moduleId',
+          'entryId',
+          'entryType',
+          'orderIndex',
+          'payload',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.userId is string && data.userId == request.auth.uid && data.userId == userId
+        && data.ventureId is string && data.ventureId == ventureId
+        && data.moduleId is string && data.moduleId == moduleId
+        && data.entryId is string && data.entryId == entryId
+        && data.entryType is string && data.entryType.size() > 0 && data.entryType.size() <= 64
+        && (!('orderIndex' in data) || (data.orderIndex is int && data.orderIndex >= 0 && data.orderIndex <= 10000))
+        && data.payload is map
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUser(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().lastLoginAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUser(incoming(), userId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().lastLoginAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'lastLoginAt']);
+      allow delete: if false;
+
+      match /ventures/{ventureId} {
+        allow get: if isValidId(userId) && isValidId(ventureId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId)
+          && isValidId(ventureId)
+          && isOwner(userId)
+          && isValidVentureWorkspace(incoming(), userId, ventureId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isValidId(userId)
+          && isValidId(ventureId)
+          && isOwner(userId)
+          && isValidVentureWorkspace(incoming(), userId, ventureId)
+          && incoming().userId == existing().userId
+          && incoming().ventureId == existing().ventureId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'activeStage',
+            'schemaVersion',
+            'activeModuleId',
+            'ventureProfile',
+            'competitionPositioning',
+            'revenuePricing',
+            'marketSizeDemand',
+            'goToMarket',
+            'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(ventureId) && isOwner(userId);
+
+        match /modules/{moduleId} {
+          allow get: if isValidId(userId) && isValidId(ventureId) && isValidId(moduleId) && isOwner(userId);
+          allow list: if isOwner(userId)
+            && resource.data.userId == request.auth.uid
+            && resource.data.ventureId == ventureId;
+          allow create: if isValidId(userId)
+            && isValidId(ventureId)
+            && isValidId(moduleId)
+            && isOwner(userId)
+            && isValidVentureModule(incoming(), userId, ventureId, moduleId)
+            && incoming().createdAt == request.time
+            && incoming().updatedAt == request.time
+            && exists(/databases/$(database)/documents/users/$(userId)/ventures/$(ventureId))
+            && get(/databases/$(database)/documents/users/$(userId)/ventures/$(ventureId)).data.userId == request.auth.uid;
+          allow update: if isValidId(userId)
+            && isValidId(ventureId)
+            && isValidId(moduleId)
+            && isOwner(userId)
+            && isValidVentureModule(incoming(), userId, ventureId, moduleId)
+            && incoming().userId == existing().userId
+            && incoming().ventureId == existing().ventureId
+            && incoming().moduleId == existing().moduleId
+            && incoming().createdAt == existing().createdAt
+            && incoming().updatedAt == request.time
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'track',
+              'title',
+              'schemaVersion',
+              'status',
+              'inputs',
+              'outputs',
+              'assumptions',
+              'evidence',
+              'aiChallenges',
+              'completedAt',
+              'updatedAt'
+            ]);
+          allow delete: if isValidId(userId) && isValidId(ventureId) && isValidId(moduleId) && isOwner(userId);
+
+          match /entries/{entryId} {
+            allow get: if isValidId(userId)
+              && isValidId(ventureId)
+              && isValidId(moduleId)
+              && isValidId(entryId)
+              && isOwner(userId);
+            allow list: if isOwner(userId)
+              && resource.data.userId == request.auth.uid
+              && resource.data.ventureId == ventureId
+              && resource.data.moduleId == moduleId;
+            allow create: if isValidId(userId)
+              && isValidId(ventureId)
+              && isValidId(moduleId)
+              && isValidId(entryId)
+              && isOwner(userId)
+              && isValidModuleEntry(incoming(), userId, ventureId, moduleId, entryId)
+              && incoming().createdAt == request.time
+              && incoming().updatedAt == request.time
+              && exists(/databases/$(database)/documents/users/$(userId)/ventures/$(ventureId)/modules/$(moduleId))
+              && get(/databases/$(database)/documents/users/$(userId)/ventures/$(ventureId)/modules/$(moduleId)).data.userId == request.auth.uid;
+            allow update: if isValidId(userId)
+              && isValidId(ventureId)
+              && isValidId(moduleId)
+              && isValidId(entryId)
+              && isOwner(userId)
+              && isValidModuleEntry(incoming(), userId, ventureId, moduleId, entryId)
+              && incoming().userId == existing().userId
+              && incoming().ventureId == existing().ventureId
+              && incoming().moduleId == existing().moduleId
+              && incoming().entryId == existing().entryId
+              && incoming().createdAt == existing().createdAt
+              && incoming().updatedAt == request.time
+              && incoming().diff(existing()).affectedKeys().hasOnly([
+                'entryType',
+                'orderIndex',
+                'payload',
+                'updatedAt'
+              ]);
+            allow delete: if isValidId(userId)
+              && isValidId(ventureId)
+              && isValidId(moduleId)
+              && isValidId(entryId)
+              && isOwner(userId);
+          }
+        }
+      }
+    }
+  }
+}
